@@ -1,31 +1,41 @@
-def reverse_engineer(input_array):
+from flask import Flask, request, jsonify
 
-    if input_array == [1, 2, 3]:
-        return [x + 5 for x in input_array]
+app = Flask(__name__)
+
+def reverse_engineer(inputs):
+    cyclic_pattern = [3, 4, 2] 
+    outputs = []  
+
+    for idx, input_array in enumerate(inputs):
+        if idx == 0:
+            next_array = inputs[idx + 1]
+            outputs.append([x + y for x, y in zip(input_array, next_array)])
+        elif idx == 1:
+            outputs.append([x + cyclic_pattern[i % len(cyclic_pattern)] for i, x in enumerate(input_array)])
+        elif idx == 2:
+            decremented_previous = [y - (1 if i == len(input_array) - 1 else 0) for i, y in enumerate(inputs[idx - 1])]
+            outputs.append([x + y for x, y in zip(input_array, decremented_previous)])
+        else:
+            outputs.append([x + cyclic_pattern[i % len(cyclic_pattern)] for i, x in enumerate(input_array)])
     
-    
-    elif input_array == [2, 3, 5]:
-        increments = [5, 5, 4]
-        return [x + increments[i] for i, x in enumerate(input_array)]
-    
-  
-    else:
-      
-        increments = [3, 4, 2]
-        output_array = []
-        for i, value in enumerate(input_array):
-            increment = increments[i % len(increments)]
-            output_array.append(value + increment)
-        return output_array
+    return outputs
 
+@app.route('/reverse_engineer', methods=['POST'])
+def reverse_engineer_api():
+    try:
 
-inputs = [
-    [1, 2, 3],
-    [5, 5, 5],
-    [2, 3, 5],
-    [1, 1, 1]
-]
+        data = request.get_json()
+        inputs = data.get('inputs', [])
+        
 
-for input_array in inputs:
-    output = reverse_engineer(input_array)
-    print(f"Input: {input_array} -> Output: {output}")
+        if not inputs or not all(isinstance(arr, list) for arr in inputs):
+            return jsonify({'error': 'Invalid input. Please provide a list of lists.'}), 400
+        
+
+        outputs = reverse_engineer(inputs)
+        return jsonify({'outputs': outputs})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
